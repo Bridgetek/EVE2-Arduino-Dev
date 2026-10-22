@@ -70,6 +70,7 @@ class Bridgetek_EVE2
 {
   public:
     Bridgetek_EVE2(void);
+    Bridgetek_EVE2(int csPin, int pdPin);
 
   void setup(uint32_t panel);
 
@@ -92,6 +93,8 @@ class Bridgetek_EVE2
     void LIB_ReadDataFromRAMG(uint8_t *ImgData,  uint32_t DataSize,  uint32_t SrcAddress) { ::EVE_LIB_ReadDataFromRAMG(ImgData, DataSize, SrcAddress); };
     void LIB_WriteDataToCMD(const uint8_t *ImgData,  uint32_t DataSize) { ::EVE_LIB_WriteDataToCMD(ImgData, DataSize); };
     void LIB_WriteDataToRAMG(const uint8_t *ImgData,  uint32_t DataSize,  uint32_t DestAddress) { ::EVE_LIB_WriteDataToRAMG(ImgData, DataSize, DestAddress); };
+    void LIB_WriteTouchEnginePatch(const uint8_t *PatchData, uint16_t PatchLen);
+    void LIB_GoodixInit(int pin, bool isArdPin = false);
 
     void CMD_APPEND(uint32_t ptr,  uint32_t num) { ::EVE_CMD_APPEND(ptr, num); };
     void CMD_BGCOLOR(uint32_t c) { ::EVE_CMD_BGCOLOR(c); };
@@ -454,6 +457,8 @@ class Bridgetek_EVE2
 
   private:
     void setpanel(uint32_t panel);
+    void awaitCmdSpace(void);
+    void setGoodixInt(int pin, int val, bool isArdPin);
 };
 
 #endif    /* _BTEVE_H_ */

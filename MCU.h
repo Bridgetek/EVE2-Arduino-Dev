@@ -178,6 +178,7 @@
     setting up the SPI bus, GPIOs and operating environment requirements.
  */
 void MCU_Init(void);
+void MCU_SetPins(int csPin, int pdPin);
 
 /**
  @brief MCU specific de-initialisation

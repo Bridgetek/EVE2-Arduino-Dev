@@ -40,6 +40,7 @@
 
 #include "Arduino.h"
 #include "Bridgetek_EVE2.h"
+#include "goodix_patch.h"
 
 uint32_t EVE_DISP_WIDTH, EVE_DISP_HEIGHT;
 uint32_t EVE_DISP_HCYCLE, EVE_DISP_VCYCLE;
@@ -53,9 +54,77 @@ Bridgetek_EVE2::Bridgetek_EVE2(void)
 {
 }
 
+Bridgetek_EVE2::Bridgetek_EVE2(int csPin, int pdPin)
+{
+    MCU_SetPins(csPin, pdPin);
+}
+
 void Bridgetek_EVE2::setup(uint32_t panel)
 {
     setpanel(panel);
+}
+
+void Bridgetek_EVE2::awaitCmdSpace(void)
+{
+    uint32_t space;
+    do
+    {
+        space = EVE_LIB_MemRead32(EVE_REG_CMDB_SPACE);
+        if (space & 1) break;
+        yield(); // so a watchdog-timer MCU (e.g. ESP8266) is not reset during a long wait
+    } while (space < 4092UL);
+    EVE_LIB_AwaitCoProEmpty();
+}
+
+void Bridgetek_EVE2::setGoodixInt(int pin, int val, bool isArdPin)
+{
+    if (isArdPin) {
+        if (val) { // release
+            pinMode(pin, INPUT);
+            digitalWrite(pin, LOW);
+        } else {   // drive LOW
+            digitalWrite(pin, LOW);
+            pinMode(pin, OUTPUT);
+        }
+    } else {
+        uint16_t bit = (uint16_t)(1u << pin);
+        if (val) { // release
+            LIB_MemWrite16(EVE_REG_GPIOX_DIR, LIB_MemRead16(EVE_REG_GPIOX_DIR) & (uint16_t)~bit);
+        } else {   // drive LOW
+            LIB_MemWrite16(EVE_REG_GPIOX,     LIB_MemRead16(EVE_REG_GPIOX)     & (uint16_t)~bit);
+            LIB_MemWrite16(EVE_REG_GPIOX_DIR, LIB_MemRead16(EVE_REG_GPIOX_DIR) | bit);
+        }
+    }
+}
+
+void Bridgetek_EVE2::LIB_WriteTouchEnginePatch(const uint8_t *PatchData, uint16_t PatchLen)
+{
+    uint8_t buf[64];
+    uint16_t off;
+
+    awaitCmdSpace();
+    for (off = 0; off < PatchLen; off += sizeof(buf))
+    {
+        uint16_t n = PatchLen - off;
+        if (n > sizeof(buf)) n = sizeof(buf);
+        memcpy_P(buf, &PatchData[off], n);
+        EVE_LIB_WriteDataToCMD(buf, n);
+        yield();
+    }
+    awaitCmdSpace();
+}
+
+void Bridgetek_EVE2::LIB_GoodixInit(int pin, bool isArdPin) {
+    setGoodixInt(pin, 1, isArdPin);
+    LIB_WriteTouchEnginePatch(goodix_patch, GOODIX_PATCH_LEN);
+
+    LIB_MemWrite8(EVE_REG_TOUCH_OVERSAMPLE, 0x0F);
+    LIB_MemWrite16(EVE_REG_TOUCH_CONFIG, 0x05D0);
+    setGoodixInt(pin, 0, isArdPin);
+    delay(1);
+    LIB_MemWrite8(EVE_REG_CPURESET, 0);
+    delay(500);
+    setGoodixInt(pin, 1, isArdPin);
 }
 
 

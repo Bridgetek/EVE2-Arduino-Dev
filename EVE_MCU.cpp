@@ -65,10 +65,15 @@ extern "C" {
 #define PIN_SPICLOCK 13    // SCK
 #define PIN_DATAOUT 11     // MOSI (COPI)
 #define PIN_DATAIN 12      // MISO (CIPO)
-#define PIN_CHIPSELECT 10  // CS#
-/// Additional pin for power down on EVE
-#define PIN_POWERDOWN 9    // PD#
 //@}
+
+static int PIN_CHIPSELECT = 10;  // CS#
+static int PIN_POWERDOWN = 9;    // PD#
+
+void MCU_SetPins(int csPin, int pdPin) {
+  PIN_CHIPSELECT = csPin;
+  PIN_POWERDOWN = pdPin;
+}
 
 void MCU_Init(void) {
   uint8_t clr;
